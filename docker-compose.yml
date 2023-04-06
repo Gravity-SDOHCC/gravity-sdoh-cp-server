@@ -1,20 +1,20 @@
 version: "3"
 services:
-  hapi-fhir-jpaserver-start:
+  gravity-sdoh-cp:
     build: .
-    container_name: hapi-fhir-jpaserver-start
+    container_name: gravity-sdoh-cp
     restart: on-failure
     ports:
       - "8080:8080"
-  hapi-fhir-postgres:
+  gravity-sdoh-cp-postgres:
     image: postgres:13-alpine
-    container_name: hapi-fhir-postgres
+    container_name: gravity-sdoh-cp-postgres
     restart: always
     environment:
       POSTGRES_DB: "hapi"
       POSTGRES_USER: "admin"
       POSTGRES_PASSWORD: "admin"
     volumes:
-      - hapi-fhir-postgres:/var/lib/postgresql/data
+      - gravity-sdoh-cp-postgres:/var/lib/postgresql/data
 volumes:
-  hapi-fhir-postgres:
+  gravity-sdoh-cp-postgres:
