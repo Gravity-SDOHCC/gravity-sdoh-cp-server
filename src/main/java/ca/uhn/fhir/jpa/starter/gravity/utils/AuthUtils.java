@@ -59,15 +59,15 @@ public class AuthUtils {
 
     Client cplocalhost = new Client("ebfacee0-8e06-4fd9-b8d3-7e0c81eb1ef4",
         "ANOh5rd7b4VUL3qJb7GN-dlNITx9BauQ9m4HnA93Gu22FMoByoXvBpQSb2gk9Yw-Nq66b6on-9JiQHsoW178HK8",
-        "http://localhost:8082/login");
+        "http://localhost:4000/auth");
     Client ehrlocalhost = new Client("1c4d149f-9995-4c5c-ac42-018150437355",
         "YtKsfSIYPzOURSY9weWaW3kGGLnu30pcZLC43K4ezQ--ycNr_omKhkZqw3DtJX1LOo87ddNLF1PuOTFH9GzaIg",
-        "http://localhost:8080/login");
+        "http://localhost:3000/auth");
     clients.add(cplocalhost);
     clients.add(ehrlocalhost);
 
-    User ehrProvider = new User("provider", BCrypt.hashpw("password", BCrypt.gensalt()), "Smart-Practitioner-71482713");
-    users.add(ehrProvider);
+    User cpProvider = new User("provider", BCrypt.hashpw("password", BCrypt.gensalt()), "SDOHCC-OrganizationCoordinationPlatformExample");
+    users.add(cpProvider);
 
     loadClients(clients);
     loadUsers(users);
