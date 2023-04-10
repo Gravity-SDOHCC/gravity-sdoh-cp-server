@@ -5,7 +5,7 @@ services:
     container_name: gravity-sdoh-cp
     restart: on-failure
     ports:
-      - "8080:8080"
+      - "8082:8080"
   gravity-sdoh-cp-postgres:
     image: postgres:13-alpine
     container_name: gravity-sdoh-cp-postgres
