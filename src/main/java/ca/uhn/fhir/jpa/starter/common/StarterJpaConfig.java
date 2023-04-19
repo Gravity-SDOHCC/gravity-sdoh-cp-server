@@ -44,6 +44,7 @@ import ca.uhn.fhir.jpa.starter.annotations.OnCorsPresent;
 import ca.uhn.fhir.jpa.starter.annotations.OnImplementationGuidesPresent;
 import ca.uhn.fhir.jpa.starter.common.validation.IRepositoryValidationInterceptorFactory;
 import ca.uhn.fhir.jpa.starter.gravity.SdohCapabilityStatementProvider;
+import ca.uhn.fhir.jpa.starter.gravity.interceptors.GetReferencedTaskResourcesInterceptor;
 import ca.uhn.fhir.jpa.starter.gravity.interceptors.SmartAuthInterceptor;
 import ca.uhn.fhir.jpa.starter.ips.IpsConfigCondition;
 import ca.uhn.fhir.jpa.starter.util.EnvironmentHelper;
@@ -285,7 +286,8 @@ public class StarterJpaConfig {
 		fhirServer.registerProviders(resourceProviderFactory.createProviders());
 		fhirServer.registerProvider(jpaSystemProvider);
 		fhirServer.setServerConformanceProvider(
-				calculateConformanceProvider(fhirSystemDao, fhirServer, daoConfig, searchParamRegistry, theValidationSupport));
+				calculateConformanceProvider(fhirSystemDao, fhirServer, daoConfig, searchParamRegistry,
+						theValidationSupport));
 
 		/*
 		 * ETag Support
@@ -355,8 +357,9 @@ public class StarterJpaConfig {
 		 * AuthorizationInterceptor
 		 * with this feature.
 		 */
-		if (fhirSystemDao.getContext().getVersion().getVersion().isEqualOrNewerThan(FhirVersionEnum.DSTU3)) { // <-- ENABLED
-																																																					// RIGHT NOW
+		if (fhirSystemDao.getContext().getVersion().getVersion().isEqualOrNewerThan(FhirVersionEnum.DSTU3)) { // <--
+																																				// ENABLED
+																																				// RIGHT NOW
 			fhirServer.registerProvider(terminologyUploaderProvider.get());
 		}
 
@@ -374,7 +377,8 @@ public class StarterJpaConfig {
 		}
 
 		if (appProperties.getAllow_cascading_deletes()) {
-			CascadingDeleteInterceptor cascadingDeleteInterceptor = new CascadingDeleteInterceptor(fhirSystemDao.getContext(),
+			CascadingDeleteInterceptor cascadingDeleteInterceptor = new CascadingDeleteInterceptor(
+					fhirSystemDao.getContext(),
 					daoRegistry, interceptorBroadcaster, theThreadSafeResourceDeleterSvc);
 			fhirServer.registerInterceptor(cascadingDeleteInterceptor);
 		}
@@ -461,6 +465,12 @@ public class StarterJpaConfig {
 		// SmartAuthInterceptor authorizationInterceptor = new SmartAuthInterceptor();
 		// fhirServer.registerInterceptor(authorizationInterceptor);
 
+		/**
+		 * Register task GetReferencedTaskResourcesInterceptor
+		 */
+		GetReferencedTaskResourcesInterceptor taskInterceptor = new GetReferencedTaskResourcesInterceptor();
+		fhirServer.registerInterceptor(taskInterceptor);
+
 		if (customInterceptorClasses == null) {
 			return;
 		}
@@ -498,13 +508,15 @@ public class StarterJpaConfig {
 			IValidationSupport theValidationSupport) {
 		FhirVersionEnum fhirVersion = fhirSystemDao.getContext().getVersion().getVersion();
 		if (fhirVersion == FhirVersionEnum.DSTU2) {
-			JpaConformanceProviderDstu2 confProvider = new JpaConformanceProviderDstu2(fhirServer, fhirSystemDao, daoConfig);
+			JpaConformanceProviderDstu2 confProvider = new JpaConformanceProviderDstu2(fhirServer, fhirSystemDao,
+					daoConfig);
 			confProvider
 					.setImplementationDescription("Gravity SDOH Clinical Care Coordination Platform HAPI FHIR DSTU2 Server");
 			return confProvider;
 		} else if (fhirVersion == FhirVersionEnum.DSTU3) {
 
-			JpaConformanceProviderDstu3 confProvider = new JpaConformanceProviderDstu3(fhirServer, fhirSystemDao, daoConfig,
+			JpaConformanceProviderDstu3 confProvider = new JpaConformanceProviderDstu3(fhirServer, fhirSystemDao,
+					daoConfig,
 					searchParamRegistry);
 			confProvider
 					.setImplementationDescription("Gravity SDOH Clinical Care Coordination Platform HAPI FHIR DSTU3 Server");
@@ -524,7 +536,8 @@ public class StarterJpaConfig {
 
 			JpaCapabilityStatementProvider confProvider = new JpaCapabilityStatementProvider(fhirServer, fhirSystemDao,
 					daoConfig, searchParamRegistry, theValidationSupport);
-			confProvider.setImplementationDescription("Gravity SDOH Clinical Care Coordination Platform HAPI FHIR R5 Server");
+			confProvider
+					.setImplementationDescription("Gravity SDOH Clinical Care Coordination Platform HAPI FHIR R5 Server");
 			return confProvider;
 		} else {
 			throw new IllegalStateException();
