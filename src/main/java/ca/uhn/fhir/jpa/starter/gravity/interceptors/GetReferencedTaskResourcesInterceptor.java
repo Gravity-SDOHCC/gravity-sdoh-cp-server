@@ -52,16 +52,18 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 		String serviceRequestId = serviceRequestUrl.substring(serviceRequestUrl.lastIndexOf('/') + 1);
 		serviceRequestUrl = receiverBaseUrl + "/ServiceRequest" + "?_id=" + serviceRequestId
 				+ "&_include=ServiceRequest:subject";
+		String ownerUrl = receiverBaseUrl + "/" + createdTask.getOwner().getReference();
+
 		IGenericClient receiverClient = setupClient(receiverBaseUrl);
 		IGenericClient myClient = setupClient(thisServerBaseUrl);
 
-		getreferencedResourcesAndPersist(receiverClient, myClient, patientUrl, requesterUrl, serviceRequestUrl);
+		getreferencedResourcesAndPersist(receiverClient, myClient, patientUrl, requesterUrl, serviceRequestUrl, ownerUrl);
 
 	}
 
 	private void getreferencedResourcesAndPersist(IGenericClient receiverClient, IGenericClient myClient,
 			String patientUrl,
-			String requesterUrl, String serviceRequestUrl) {
+			String requesterUrl, String serviceRequestUrl, String ownerUrl) {
 
 		try {
 			Patient patient = receiverClient.read().resource(Patient.class).withUrl(patientUrl).execute();
@@ -149,6 +151,14 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 
 		} catch (Exception e) {
 			logger.severe("Unable to retrieved/update requester for received task: " + e.getMessage());
+		}
+
+		try {
+			Organization organization = receiverClient.read().resource(Organization.class).withUrl(ownerUrl)
+					.execute();
+			myClient.update().resource(organization).execute();
+		} catch (Exception e) {
+			logger.severe("Unable to retrieved/update owner for received task: " + e.getMessage());
 		}
 	}
 
