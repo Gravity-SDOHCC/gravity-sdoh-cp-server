@@ -43,6 +43,7 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 		if (!createdTask.getPartOf().isEmpty()) {
 			return;
 		}
+		logger.info("Retrieving associated resources for task " + createdTask.getIdPart());
 
 		String thisServerBaseUrl = theRequestDetails.getFhirServerBase();
 		String patientUrl = createdTask.getFor().getReference();
@@ -65,6 +66,17 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 			String patientUrl,
 			String requesterUrl, String serviceRequestUrl, String ownerUrl) {
 
+		// Retrieving Task owner resource
+		try {
+			Organization owner = receiverClient.read().resource(Organization.class).withUrl(ownerUrl)
+					.execute();
+			myClient.update().resource(owner).execute();
+			logger.info("Successfully retrieved and saved the associated task owner information");
+		} catch (Exception e) {
+			logger.severe("Unable to retrieved/update owner for received task: " + e.getMessage());
+		}
+
+		// Retrieving Task's patient info
 		try {
 			Patient patient = receiverClient.read().resource(Patient.class).withUrl(patientUrl).execute();
 			myClient.update().resource(patient).execute();
@@ -73,6 +85,35 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 			logger.severe("Unable to retrieve/update referenced resoource for received task: " + e.getMessage());
 		}
 
+		// Retrieving Task's requester information
+		try {
+			if (requesterUrl.contains("Organization")) {
+				Organization organization = receiverClient.read().resource(Organization.class).withUrl(requesterUrl)
+						.execute();
+				myClient.update().resource(organization).execute();
+
+			} else if (requesterUrl.contains("PractitionerRole")) {
+
+				PractitionerRole practitionerRole = receiverClient.read().resource(PractitionerRole.class)
+						.withUrl(requesterUrl).execute();
+				String orgRef = practitionerRole.getOrganization().getReference();
+				orgRef = receiverClient.getServerBase() + "/" + orgRef;
+				practitionerRole.getOrganization().setReference(orgRef);
+				String practitionerRef = practitionerRole.getPractitioner().getReference();
+				practitionerRef = receiverClient.getServerBase() + "/" + practitionerRef;
+				practitionerRole.getPractitioner().setReference(practitionerRef);
+				myClient.update().resource(practitionerRole).execute();
+			} else if (requesterUrl.contains("Practitioner")) {
+				Practitioner practitioner = receiverClient.read().resource(Practitioner.class).withUrl(requesterUrl)
+						.execute();
+				myClient.update().resource(practitioner).execute();
+			}
+			logger.info("Successfully retrieved and saved the associated task requester");
+		} catch (Exception e) {
+			logger.severe("Unable to retrieved/update requester for received task: " + e.getMessage());
+		}
+
+		// Retrieving Patient's consent and task's service request
 		String consentId = "";
 		ServiceRequest request = null;
 		try {
@@ -101,7 +142,7 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 			logger.severe("Unable to retrieve service request for received task: " + e.getMessage());
 		}
 		try {
-			if (!consentId.isEmpty()) {
+			if (consentId != null && !consentId.isEmpty()) {
 				Consent consent = receiverClient.read().resource(Consent.class).withId(consentId).execute();
 				String orgRef = consent.getOrganizationFirstRep().getReference();
 				orgRef = receiverClient.getServerBase() + "/" + orgRef;
@@ -110,55 +151,20 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 				consent.setOrganization(newList);
 
 				myClient.update().resource(consent).execute();
+				logger.info("Retrieved the associated patient's consent");
 			}
 		} catch (Exception e) {
 			logger.severe("Unable to retrieve/update consent for received task: " + e.getMessage());
-
 		}
 
 		try {
 			if (request != null) {
 				myClient.update().resource(request).execute();
-				logger.info("Successfully saved the associated patient");
+				logger.info("Successfully saved the associated task's service request");
 			}
 
 		} catch (Exception e) {
 			logger.severe("Unable to update service request for received task: " + e.getMessage());
-		}
-
-		try {
-			if (requesterUrl.contains("Organization")) {
-				Organization organization = receiverClient.read().resource(Organization.class).withUrl(requesterUrl)
-						.execute();
-				myClient.update().resource(organization).execute();
-
-			} else if (requesterUrl.contains("PractitionerRole")) {
-
-				PractitionerRole practitionerRole = receiverClient.read().resource(PractitionerRole.class)
-						.withUrl(requesterUrl).execute();
-				String orgRef = practitionerRole.getOrganization().getReference();
-				orgRef = receiverClient.getServerBase() + "/" + orgRef;
-				practitionerRole.getOrganization().setReference(orgRef);
-				String practitionerRef = practitionerRole.getPractitioner().getReference();
-				practitionerRef = receiverClient.getServerBase() + "/" + practitionerRef;
-				practitionerRole.getPractitioner().setReference(practitionerRef);
-				myClient.update().resource(practitionerRole).execute();
-			} else if (requesterUrl.contains("Practitioner")) {
-				Practitioner practitioner = receiverClient.read().resource(Practitioner.class).withUrl(requesterUrl)
-						.execute();
-				myClient.update().resource(practitioner).execute();
-			}
-
-		} catch (Exception e) {
-			logger.severe("Unable to retrieved/update requester for received task: " + e.getMessage());
-		}
-
-		try {
-			Organization organization = receiverClient.read().resource(Organization.class).withUrl(ownerUrl)
-					.execute();
-			myClient.update().resource(organization).execute();
-		} catch (Exception e) {
-			logger.severe("Unable to retrieved/update owner for received task: " + e.getMessage());
 		}
 	}
 
