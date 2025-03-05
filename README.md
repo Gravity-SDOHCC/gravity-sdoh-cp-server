@@ -21,21 +21,28 @@ cd gravity-sdoh-cp-server
 
 ## Running locally
 
-The easiest way to run this server entirely depends on your environment requirements. At least, the following 4 ways are supported:
+The easiest way to run this server entirely depends on your environment requirements. The following ways are supported:
 
 ### Using jetty
 ```bash
-mvn jetty:run
+mvn -Pjetty spring-boot:run
 ```
 
 
-If you need to run this server on a different port (using Maven), you can change the port in the run command as follows:
-
+### Using Spring Boot
 ```bash
-mvn -Djetty.port=8888 jetty:run
+mvn spring-boot:run
 ```
 
-Server will then be accessible at http://localhost:8888/ and eg. http://localhost:8888/fhir/metadata. Remember to adjust you overlay configuration in the application.yaml to eg.
+The Server will then be accessible at http://localhost:8080/fhir and the CapabilityStatement will be found at http://localhost:8080/fhir/metadata.
+If you want to run this server on a different port, you can change the port in the `src/main/resources/application.yaml` file as follows:
+```yaml
+server:
+#  servlet:
+#    context-path: /example/path
+  port: 8888
+```
+The Server will then be accessible at http://localhost:8888/fhir and the CapabilityStatement will be found at http://localhost:8888/fhir/metadata. Remember to adjust your overlay configuration in the `application.yaml` file to the following:
 
 ```yaml
     tester:
@@ -51,7 +58,7 @@ Server will then be accessible at http://localhost:8888/ and eg. http://localhos
 ```bash
 mvn clean spring-boot:run -Pboot
 ```
-Server will then be accessible at http://localhost:8080/ and eg. http://localhost:8080/fhir/metadata. Remember to adjust you overlay configuration in the application.yaml to eg.
+Server will then be accessible at http://localhost:8080/ and eg. http://localhost:8080/fhir/metadata. Remember to adjust you overlay configuration in the application.yaml to the following:
 
 ```yaml
     tester:
@@ -65,9 +72,9 @@ Server will then be accessible at http://localhost:8080/ and eg. http://localhos
 
 ### Using Spring Boot
 ```bash
-mvn clean package spring-boot:repackage -Pboot && java -jar target/ROOT.war
+mvn clean package spring-boot:repackage -DskipTests=true -Pboot && java -jar target/ROOT.war
 ```
-Server will then be accessible at http://localhost:8080/ and eg. http://localhost:8080/fhir/metadata. Remember to adjust you overlay configuration in the application.yaml to eg.
+Server will then be accessible at http://localhost:8080/ and eg. http://localhost:8080/fhir/metadata. Remember to adjust your overlay configuration in the application.yaml to the following:
 
 ```yaml
     tester:
@@ -82,7 +89,7 @@ Server will then be accessible at http://localhost:8080/ and eg. http://localhos
 ```bash
 mvn clean package com.google.cloud.tools:jib-maven-plugin:dockerBuild -Dimage=distroless-hapi && docker run -p 8080:8080 distroless-hapi
 ```
-Server will then be accessible at http://localhost:8080/ and eg. http://localhost:8080/fhir/metadata. Remember to adjust you overlay configuration in the application.yaml to eg.
+Server will then be accessible at http://localhost:8080/ and eg. http://localhost:8080/fhir/metadata. Remember to adjust your overlay configuration in the application.yaml to the following:
 
 ```yaml
     tester:
@@ -98,7 +105,7 @@ Server will then be accessible at http://localhost:8080/ and eg. http://localhos
 ```bash
 ./build-docker-image.sh && docker run -p 8080:8080 hapi-fhir/hapi-fhir-jpaserver-starter:latest
 ```
-Server will then be accessible at http://localhost:8080/ and eg. http://localhost:8080/fhir/metadata. Remember to adjust you overlay configuration in the application.yaml to eg.
+Server will then be accessible at http://localhost:8080/ and eg. http://localhost:8080/fhir/metadata. Remember to adjust your overlay configuration in the application.yaml to the following:
 
 ```yaml
     tester:
