@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import javax.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequest;
 
 import com.auth0.jwt.JWT;
 import com.auth0.jwt.JWTVerifier;
@@ -100,8 +100,9 @@ public class AuthUtils {
    *
    * @return the fhir base url
    */
-  public static String getFhirBaseUrl() {
-    String baseUrl = appProperties.getServer_address();
+  public static String getFhirBaseUrl(String serverAddress) {
+    String baseUrl = serverAddress;
+    logger.info("FHIR Base URL: " + baseUrl);
     if (baseUrl.endsWith("/"))
       return StringUtils.chop(baseUrl);
     else

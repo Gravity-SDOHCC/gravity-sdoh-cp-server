@@ -1,30 +1,19 @@
 package ca.uhn.fhir.jpa.starter.gravity;
 
-import ca.uhn.fhir.jpa.api.dao.IFhirSystemDao;
-import ca.uhn.fhir.jpa.provider.JpaCapabilityStatementProvider;
-import ca.uhn.fhir.rest.server.RestfulServer;
-import ca.uhn.fhir.jpa.api.config.DaoConfig;
-import ca.uhn.fhir.rest.server.util.ISearchParamRegistry;
-import ca.uhn.fhir.context.support.IValidationSupport;
+import ca.uhn.fhir.interceptor.api.Hook;
+import ca.uhn.fhir.interceptor.api.Pointcut;
+import jakarta.interceptor.Interceptor;
+import org.hl7.fhir.instance.model.api.IBaseConformance;
 import org.hl7.fhir.r4.model.CapabilityStatement;
 import org.hl7.fhir.r4.model.CapabilityStatement.CapabilityStatementSoftwareComponent;
-
-import javax.servlet.http.HttpServletRequest;
-import ca.uhn.fhir.rest.api.server.RequestDetails;
 import org.hl7.fhir.r4.model.Enumerations.PublicationStatus;
-import javax.annotation.Nonnull;
 
-public class SdohCapabilityStatementProvider extends JpaCapabilityStatementProvider {
-  public SdohCapabilityStatementProvider(@Nonnull RestfulServer theRestfulServer,
-      @Nonnull IFhirSystemDao<?, ?> theSystemDao,
-      @Nonnull DaoConfig theDaoConfig, @Nonnull ISearchParamRegistry theSearchParamRegistry,
-      IValidationSupport theValidationSupport) {
-    super(theRestfulServer, theSystemDao, theDaoConfig, theSearchParamRegistry, theValidationSupport);
-  }
+@Interceptor
+public class SdohCapabilityStatementProvider{
 
-  @Override
-  public CapabilityStatement getServerConformance(HttpServletRequest theRequest, RequestDetails theRequestDetails) {
-    CapabilityStatement metadata = (CapabilityStatement) super.getServerConformance(theRequest, theRequestDetails);
+  @Hook(Pointcut.SERVER_CAPABILITY_STATEMENT_GENERATED)
+  public CapabilityStatement getServerConformance(IBaseConformance theCapabilityStatement) {
+    CapabilityStatement metadata = (CapabilityStatement) theCapabilityStatement;
     metadata.addInstantiates("http://hl7.org/fhir/us/sdoh-clinicalcare/CapabilityStatement/SDOHCC-ReferralSource");
     metadata.setName("Gravity SDOH CP FHIR Server RI");
     metadata.setDescription(

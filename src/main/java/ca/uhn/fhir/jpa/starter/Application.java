@@ -3,7 +3,10 @@ package ca.uhn.fhir.jpa.starter;
 import ca.uhn.fhir.batch2.jobs.config.Batch2JobsConfig;
 import ca.uhn.fhir.jpa.batch2.JpaBatch2Config;
 import ca.uhn.fhir.jpa.starter.annotations.OnEitherVersion;
-import ca.uhn.fhir.jpa.starter.common.FhirTesterConfig;
+import ca.uhn.fhir.jpa.starter.cdshooks.StarterCdsHooksConfig;
+import ca.uhn.fhir.jpa.starter.cr.StarterCrDstu3Config;
+import ca.uhn.fhir.jpa.starter.cr.StarterCrR4Config;
+import ca.uhn.fhir.jpa.starter.gravity.SdohCapabilityStatementProvider;
 import ca.uhn.fhir.jpa.starter.gravity.controllers.AuthorizationController;
 import ca.uhn.fhir.jpa.starter.mdm.MdmConfig;
 import ca.uhn.fhir.jpa.subscription.channel.config.SubscriptionChannelConfig;
@@ -16,7 +19,7 @@ import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration;
-import org.springframework.boot.builder.SpringApplicationBuilder;
+import org.springframework.boot.autoconfigure.thymeleaf.ThymeleafAutoConfiguration;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
 import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
@@ -27,8 +30,11 @@ import org.springframework.web.context.support.AnnotationConfigWebApplicationCon
 import org.springframework.web.servlet.DispatcherServlet;
 
 @ServletComponentScan(basePackageClasses = { RestfulServer.class })
-@SpringBootApplication(exclude = { ElasticsearchRestClientAutoConfiguration.class })
+@SpringBootApplication(exclude = {ElasticsearchRestClientAutoConfiguration.class, ThymeleafAutoConfiguration.class})
 @Import({
+	StarterCrR4Config.class,
+	StarterCrDstu3Config.class,
+	StarterCdsHooksConfig.class,
     SubscriptionSubmitterConfig.class,
     SubscriptionProcessorConfig.class,
     SubscriptionChannelConfig.class,
@@ -47,18 +53,13 @@ public class Application extends SpringBootServletInitializer {
     // UI is now accessible at http://localhost:8080/
   }
 
-  @Override
-  protected SpringApplicationBuilder configure(
-      SpringApplicationBuilder builder) {
-    return builder.sources(Application.class);
-  }
-
   @Autowired
   AutowireCapableBeanFactory beanFactory;
 
   @Bean
   @Conditional(OnEitherVersion.class)
   public ServletRegistrationBean hapiServletRegistration(RestfulServer restfulServer) {
+    restfulServer.registerInterceptor(new SdohCapabilityStatementProvider());
     ServletRegistrationBean servletRegistrationBean = new ServletRegistrationBean();
     beanFactory.autowireBean(restfulServer);
     servletRegistrationBean.setServlet(restfulServer);
@@ -69,43 +70,15 @@ public class Application extends SpringBootServletInitializer {
   }
 
   @Bean
-  public ServletRegistrationBean overlayRegistrationBean() {
-
-    AnnotationConfigWebApplicationContext annotationConfigWebApplicationContext = new AnnotationConfigWebApplicationContext();
-    annotationConfigWebApplicationContext.register(FhirTesterConfig.class, AuthorizationController.class);
-
-    DispatcherServlet dispatcherServlet = new DispatcherServlet(
-        annotationConfigWebApplicationContext);
+  public ServletRegistrationBean<DispatcherServlet> oauthServletRegistration(DispatcherServlet dispatcherServlet) {
     dispatcherServlet.setContextClass(AnnotationConfigWebApplicationContext.class);
-    dispatcherServlet.setContextConfigLocation("" + FhirTesterConfig.class.getName() + ", " +
-        AuthorizationController.class.getName());
+    dispatcherServlet.setContextConfigLocation(AuthorizationController.class.getName());
 
     ServletRegistrationBean registrationBean = new ServletRegistrationBean();
     registrationBean.setServlet(dispatcherServlet);
     registrationBean.addUrlMappings("/*");
     registrationBean.addUrlMappings("/fhir/oauth/*");
-    registrationBean.setLoadOnStartup(1);
+    registrationBean.setLoadOnStartup(2);
     return registrationBean;
-
   }
-
-  // @Bean
-  // public ServletRegistrationBean oauthRegistrationBean() {
-
-  // AnnotationConfigWebApplicationContext annotationConfigWebApplicationContext =
-  // new AnnotationConfigWebApplicationContext();
-  // annotationConfigWebApplicationContext.register(AuthorizationController.class);
-
-  // DispatcherServlet dispatcherServlet = new DispatcherServlet(
-  // annotationConfigWebApplicationContext);
-  // dispatcherServlet.setContextClass(AnnotationConfigWebApplicationContext.class);
-  // dispatcherServlet.setContextConfigLocation(AuthorizationController.class.getName());
-
-  // ServletRegistrationBean registrationBean = new ServletRegistrationBean();
-  // registrationBean.setServlet(dispatcherServlet);
-  // registrationBean.addUrlMappings("/fhir/oauth/*");
-  // registrationBean.setLoadOnStartup(1);
-  // return registrationBean;
-
-  // }
 }

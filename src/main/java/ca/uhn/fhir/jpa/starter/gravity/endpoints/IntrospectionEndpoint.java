@@ -24,14 +24,14 @@ public class IntrospectionEndpoint {
   }
 
   private static final Logger logger = ServerLogger.getLogger();
-  public static final Algorithm ALGORITHM = Algorithm.RSA256(AuthorizationController.getPublicKey(), null);
-  public static final JWTVerifier VERIFIER = JWT.require(ALGORITHM).withIssuer(AuthUtils.getFhirBaseUrl())
-      .withAudience(AuthUtils.getFhirBaseUrl()).build();
 
-  public static ResponseEntity<String> handleIntrospection(String token) {
+  public static ResponseEntity<String> handleIntrospection(String token, String serverAddress) {
     final Map<String, String> responseData = new HashMap<>();
 
+    String baseUrl = AuthUtils.getFhirBaseUrl(serverAddress);
     try {
+      Algorithm ALGORITHM = Algorithm.RSA256(AuthorizationController.getPublicKey(), null);
+      JWTVerifier VERIFIER = JWT.require(ALGORITHM).withIssuer(baseUrl).withAudience(baseUrl).build();
       DecodedJWT jwt = VERIFIER.verify(token);
 
       responseData.put("active", String.valueOf(true));

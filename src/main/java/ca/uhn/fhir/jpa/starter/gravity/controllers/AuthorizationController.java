@@ -13,10 +13,12 @@ import java.security.spec.RSAPrivateKeySpec;
 import java.security.spec.RSAPublicKeySpec;
 import java.util.logging.Logger;
 
-import javax.annotation.PostConstruct;
-import javax.servlet.http.HttpServletRequest;
+import ca.uhn.fhir.jpa.starter.AppProperties;
+import jakarta.annotation.PostConstruct;
+import jakarta.servlet.http.HttpServletRequest;
 
 import org.apache.commons.text.StringEscapeUtils;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,6 +41,9 @@ public class AuthorizationController {
   private static RSAPrivateKey privateKey;
   private static final Logger logger = ServerLogger.getLogger();
   private static String keyId = "NjVBRjY5MDlCMUIwNzU4RTA2QzZFMDQ4QzQ2MDAyQjVDNjk1RTM2Qg";
+
+  @Autowired
+  private AppProperties appProperties;
 
   @PostConstruct
   protected static void postConstruct() throws NoSuchAlgorithmException, InvalidKeySpecException {
@@ -155,7 +160,7 @@ public class AuthorizationController {
             + clientId + "&redirect_uri=" + redirectURI + "&scope=" + scope + "&state=" + state + "&aud=" + aud);
 
     return AuthorizationEndpoint.handleAuthorizationPost(entity, aud, scope, state, clientId, redirectURI,
-        responseType);
+        responseType, appProperties.getServer_address());
   }
 
   @PostMapping(value = "/token", params = { "grant_type", "code", "redirect_uri" }, produces = { "application/json" })
@@ -170,7 +175,7 @@ public class AuthorizationController {
     logger.info("TokenEndpoint::Token:Received request /token?grant_type=" + grantType + "&code=" + code
         + "&redirect_uri=" + redirectURI);
 
-    return TokenEndpoint.handleTokenRequest(request, grantType, code, redirectURI);
+    return TokenEndpoint.handleTokenRequest(request, grantType, code, redirectURI, appProperties.getServer_address());
   }
 
   @PostMapping(value = "/token", params = { "grant_type", "refresh_token" }, produces = { "application/json" })
@@ -184,7 +189,7 @@ public class AuthorizationController {
     logger.info("TokenEndpoint::RefreshToken:Received request /token?grant_type=" + grantType + "&refresh_token="
         + refreshToken);
 
-    return TokenEndpoint.handleTokenRequest(request, grantType, refreshToken, null);
+    return TokenEndpoint.handleTokenRequest(request, grantType, refreshToken, null, appProperties.getServer_address());
   }
 
   @PostMapping(value = "/introspect", params = { "token" }, produces = { "application/json" })
@@ -194,6 +199,6 @@ public class AuthorizationController {
 
     logger.info("IntrospectEndpoint::Introspect:" + token);
 
-    return IntrospectionEndpoint.handleIntrospection(token);
+    return IntrospectionEndpoint.handleIntrospection(token, appProperties.getServer_address());
   }
 }
