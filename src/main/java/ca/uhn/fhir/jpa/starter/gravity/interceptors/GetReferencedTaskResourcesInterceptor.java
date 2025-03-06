@@ -1,15 +1,17 @@
 package ca.uhn.fhir.jpa.starter.gravity.interceptors;
 
-import ca.uhn.fhir.rest.server.interceptor.InterceptorAdapter;
+import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.interceptor.api.Hook;
 import ca.uhn.fhir.interceptor.api.Pointcut;
+import ca.uhn.fhir.jpa.starter.gravity.ServerLogger;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.api.server.ResponseDetails;
-
+import ca.uhn.fhir.rest.client.api.IGenericClient;
+import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
+import ca.uhn.fhir.rest.server.interceptor.InterceptorAdapter;
 import org.hl7.fhir.instance.model.api.IBaseResource;
-import org.hl7.fhir.r4.model.Task;
-import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Bundle;
+import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
 import org.hl7.fhir.r4.model.Consent;
 import org.hl7.fhir.r4.model.Organization;
 import org.hl7.fhir.r4.model.Patient;
@@ -18,11 +20,7 @@ import org.hl7.fhir.r4.model.PractitionerRole;
 import org.hl7.fhir.r4.model.Reference;
 import org.hl7.fhir.r4.model.ResourceType;
 import org.hl7.fhir.r4.model.ServiceRequest;
-
-import ca.uhn.fhir.context.FhirContext;
-import ca.uhn.fhir.rest.client.api.IGenericClient;
-import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
-import ca.uhn.fhir.jpa.starter.gravity.ServerLogger;
+import org.hl7.fhir.r4.model.Task;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -31,11 +29,11 @@ import java.util.logging.Logger;
 public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 	private static final Logger logger = ServerLogger.getLogger();
 
-	private static final FhirContext ctx = FhirContext.forR4();;
+	private static final FhirContext ctx = FhirContext.forR4();
 
 	@Hook(Pointcut.STORAGE_PRECOMMIT_RESOURCE_CREATED)
-	public void handleTaskCreation(IBaseResource theResource, RequestDetails theRequestDetails,
-			ResponseDetails theResponseDetails) {
+	public void handleTaskCreation(
+			IBaseResource theResource, RequestDetails theRequestDetails, ResponseDetails theResponseDetails) {
 		if (!(theResource instanceof Task)) {
 			return;
 		}
@@ -51,24 +49,31 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 		String requesterUrl = createdTask.getRequester().getReference();
 		String receiverBaseUrl = serviceRequestUrl.substring(0, serviceRequestUrl.indexOf("/ServiceRequest"));
 		String serviceRequestId = serviceRequestUrl.substring(serviceRequestUrl.lastIndexOf('/') + 1);
-		serviceRequestUrl = receiverBaseUrl + "/ServiceRequest" + "?_id=" + serviceRequestId
-				+ "&_include=ServiceRequest:subject";
+		serviceRequestUrl =
+				receiverBaseUrl + "/ServiceRequest" + "?_id=" + serviceRequestId + "&_include=ServiceRequest:subject";
 		String ownerUrl = receiverBaseUrl + "/" + createdTask.getOwner().getReference();
 
 		IGenericClient receiverClient = setupClient(receiverBaseUrl);
 		IGenericClient myClient = setupClient(thisServerBaseUrl);
 
-		getreferencedResourcesAndPersist(receiverClient, myClient, patientUrl, requesterUrl, serviceRequestUrl, ownerUrl);
-
+		getreferencedResourcesAndPersist(
+				receiverClient, myClient, patientUrl, requesterUrl, serviceRequestUrl, ownerUrl);
 	}
 
-	private void getreferencedResourcesAndPersist(IGenericClient receiverClient, IGenericClient myClient,
+	private void getreferencedResourcesAndPersist(
+			IGenericClient receiverClient,
+			IGenericClient myClient,
 			String patientUrl,
-			String requesterUrl, String serviceRequestUrl, String ownerUrl) {
+			String requesterUrl,
+			String serviceRequestUrl,
+			String ownerUrl) {
 
 		// Retrieving Task owner resource
 		try {
-			Organization owner = receiverClient.read().resource(Organization.class).withUrl(ownerUrl)
+			Organization owner = receiverClient
+					.read()
+					.resource(Organization.class)
+					.withUrl(ownerUrl)
 					.execute();
 			myClient.update().resource(owner).execute();
 			logger.info("Successfully retrieved and saved the associated task owner information");
@@ -78,7 +83,11 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 
 		// Retrieving Task's patient info
 		try {
-			Patient patient = receiverClient.read().resource(Patient.class).withUrl(patientUrl).execute();
+			Patient patient = receiverClient
+					.read()
+					.resource(Patient.class)
+					.withUrl(patientUrl)
+					.execute();
 			myClient.update().resource(patient).execute();
 			logger.info("Successfully retrieved and saved the associated patient");
 		} catch (Exception e) {
@@ -88,14 +97,20 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 		// Retrieving Task's requester information
 		try {
 			if (requesterUrl.contains("Organization")) {
-				Organization organization = receiverClient.read().resource(Organization.class).withUrl(requesterUrl)
+				Organization organization = receiverClient
+						.read()
+						.resource(Organization.class)
+						.withUrl(requesterUrl)
 						.execute();
 				myClient.update().resource(organization).execute();
 
 			} else if (requesterUrl.contains("PractitionerRole")) {
 
-				PractitionerRole practitionerRole = receiverClient.read().resource(PractitionerRole.class)
-						.withUrl(requesterUrl).execute();
+				PractitionerRole practitionerRole = receiverClient
+						.read()
+						.resource(PractitionerRole.class)
+						.withUrl(requesterUrl)
+						.execute();
 				String orgRef = practitionerRole.getOrganization().getReference();
 				orgRef = receiverClient.getServerBase() + "/" + orgRef;
 				practitionerRole.getOrganization().setReference(orgRef);
@@ -104,7 +119,10 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 				practitionerRole.getPractitioner().setReference(practitionerRef);
 				myClient.update().resource(practitionerRole).execute();
 			} else if (requesterUrl.contains("Practitioner")) {
-				Practitioner practitioner = receiverClient.read().resource(Practitioner.class).withUrl(requesterUrl)
+				Practitioner practitioner = receiverClient
+						.read()
+						.resource(Practitioner.class)
+						.withUrl(requesterUrl)
 						.execute();
 				myClient.update().resource(practitioner).execute();
 			}
@@ -117,7 +135,11 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 		String consentId = "";
 		ServiceRequest request = null;
 		try {
-			Bundle bundle = receiverClient.search().byUrl(serviceRequestUrl).returnBundle(Bundle.class).execute();
+			Bundle bundle = receiverClient
+					.search()
+					.byUrl(serviceRequestUrl)
+					.returnBundle(Bundle.class)
+					.execute();
 			logger.info("Retrieved the associated service request from the requester");
 
 			for (BundleEntryComponent entry : bundle.getEntry()) {
@@ -129,7 +151,8 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 						String consentref = request.getSupportingInfoFirstRep().getReference();
 						consentId = consentref.substring(consentref.lastIndexOf('/') + 1);
 					} else if (request.getReasonReferenceFirstRep() != null) {
-						String conditionref = request.getReasonReferenceFirstRep().getReference();
+						String conditionref =
+								request.getReasonReferenceFirstRep().getReference();
 						conditionref = receiverClient.getServerBase() + "/" + conditionref;
 						List<Reference> newRef = new ArrayList<Reference>();
 						newRef.add(new Reference(conditionref));
@@ -143,7 +166,11 @@ public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
 		}
 		try {
 			if (consentId != null && !consentId.isEmpty()) {
-				Consent consent = receiverClient.read().resource(Consent.class).withId(consentId).execute();
+				Consent consent = receiverClient
+						.read()
+						.resource(Consent.class)
+						.withId(consentId)
+						.execute();
 				String orgRef = consent.getOrganizationFirstRep().getReference();
 				orgRef = receiverClient.getServerBase() + "/" + orgRef;
 				List<Reference> newList = new ArrayList<Reference>();
