@@ -4,6 +4,8 @@ Reference Implementation CP HAPI FHIR® based server for the Coordination
 Platform (CP) system as defined in the [Gravity SDOHCC Implementation
 Guide](http://hl7.org/fhir/us/sdoh-clinicalcare/CapabilityStatement-SDOHCC-CoordinationPlatform.html).
 
+This server is currently hosted at https://sdoh-cp-server.victoriousbay-86ce63e0.southcentralus.azurecontainerapps.io
+
 ## Prerequisites
 
 - Java JDK 17 +
@@ -116,10 +118,6 @@ Server will then be accessible at http://localhost:8080/ and eg. http://localhos
           refuse_to_fetch_third_party_urls: false
           fhir_version: R4
 ```
-
-## Deployment
-
-This server is automatically deployed to heroku with any push to the `master` branch.
 
 ## Using this Server
 
