@@ -8,6 +8,7 @@ import ca.uhn.fhir.jpa.starter.cr.StarterCrDstu3Config;
 import ca.uhn.fhir.jpa.starter.cr.StarterCrR4Config;
 import ca.uhn.fhir.jpa.starter.gravity.SdohCapabilityStatementProvider;
 import ca.uhn.fhir.jpa.starter.gravity.controllers.AuthorizationController;
+import ca.uhn.fhir.jpa.starter.gravity.interceptors.GetReferencedTaskResourcesInterceptor;
 import ca.uhn.fhir.jpa.starter.mdm.MdmConfig;
 import ca.uhn.fhir.jpa.subscription.channel.config.SubscriptionChannelConfig;
 import ca.uhn.fhir.jpa.subscription.match.config.SubscriptionProcessorConfig;
@@ -60,6 +61,7 @@ public class Application extends SpringBootServletInitializer {
 	@Conditional(OnEitherVersion.class)
 	public ServletRegistrationBean hapiServletRegistration(RestfulServer restfulServer) {
 		restfulServer.registerInterceptor(new SdohCapabilityStatementProvider());
+		restfulServer.registerInterceptor(new GetReferencedTaskResourcesInterceptor());
 		ServletRegistrationBean servletRegistrationBean = new ServletRegistrationBean();
 		beanFactory.autowireBean(restfulServer);
 		servletRegistrationBean.setServlet(restfulServer);

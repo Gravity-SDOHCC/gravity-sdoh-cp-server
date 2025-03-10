@@ -2,13 +2,13 @@ package ca.uhn.fhir.jpa.starter.gravity.interceptors;
 
 import ca.uhn.fhir.context.FhirContext;
 import ca.uhn.fhir.interceptor.api.Hook;
+import ca.uhn.fhir.interceptor.api.Interceptor;
 import ca.uhn.fhir.interceptor.api.Pointcut;
 import ca.uhn.fhir.jpa.starter.gravity.ServerLogger;
 import ca.uhn.fhir.rest.api.server.RequestDetails;
 import ca.uhn.fhir.rest.api.server.ResponseDetails;
 import ca.uhn.fhir.rest.client.api.IGenericClient;
 import ca.uhn.fhir.rest.client.api.ServerValidationModeEnum;
-import ca.uhn.fhir.rest.server.interceptor.InterceptorAdapter;
 import org.hl7.fhir.instance.model.api.IBaseResource;
 import org.hl7.fhir.r4.model.Bundle;
 import org.hl7.fhir.r4.model.Bundle.BundleEntryComponent;
@@ -26,7 +26,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
 
-public class GetReferencedTaskResourcesInterceptor extends InterceptorAdapter {
+@Interceptor
+public class GetReferencedTaskResourcesInterceptor {
 	private static final Logger logger = ServerLogger.getLogger();
 
 	private static final FhirContext ctx = FhirContext.forR4();
