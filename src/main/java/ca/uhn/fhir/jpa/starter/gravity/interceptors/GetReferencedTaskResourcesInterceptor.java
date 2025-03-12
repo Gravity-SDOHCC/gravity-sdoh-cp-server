@@ -91,6 +91,7 @@ public class GetReferencedTaskResourcesInterceptor {
 					.resource(Patient.class)
 					.withUrl(patientUrl)
 					.execute();
+			patient.setIdElement(patient.getIdElement().toVersionless());
 			myClient.update().resource(patient).execute();
 			logger.info("Successfully retrieved and saved the associated patient");
 		} catch (Exception e) {
@@ -105,6 +106,7 @@ public class GetReferencedTaskResourcesInterceptor {
 						.resource(Organization.class)
 						.withUrl(requesterUrl)
 						.execute();
+				organization.setIdElement(organization.getIdElement().toVersionless());
 				myClient.update().resource(organization).execute();
 
 			} else if (requesterUrl.contains("PractitionerRole")) {
@@ -120,6 +122,7 @@ public class GetReferencedTaskResourcesInterceptor {
 				String practitionerRef = practitionerRole.getPractitioner().getReference();
 				practitionerRef = receiverClient.getServerBase() + "/" + practitionerRef;
 				practitionerRole.getPractitioner().setReference(practitionerRef);
+				practitionerRole.setIdElement(practitionerRole.getIdElement().toVersionless());
 				myClient.update().resource(practitionerRole).execute();
 			} else if (requesterUrl.contains("Practitioner")) {
 				Practitioner practitioner = receiverClient
@@ -127,6 +130,7 @@ public class GetReferencedTaskResourcesInterceptor {
 						.resource(Practitioner.class)
 						.withUrl(requesterUrl)
 						.execute();
+				practitioner.setIdElement(practitioner.getIdElement().toVersionless());
 				myClient.update().resource(practitioner).execute();
 			}
 			logger.info("Successfully retrieved and saved the associated task requester");
@@ -179,7 +183,7 @@ public class GetReferencedTaskResourcesInterceptor {
 				List<Reference> newList = new ArrayList<Reference>();
 				newList.add(new Reference(orgRef));
 				consent.setOrganization(newList);
-
+				consent.setIdElement(consent.getIdElement().toVersionless());
 				myClient.update().resource(consent).execute();
 				logger.info("Retrieved the associated patient's consent");
 			}
@@ -189,6 +193,7 @@ public class GetReferencedTaskResourcesInterceptor {
 
 		try {
 			if (request != null) {
+				request.setIdElement(request.getIdElement().toVersionless());
 				myClient.update().resource(request).execute();
 				logger.info("Successfully saved the associated task's service request");
 			}
