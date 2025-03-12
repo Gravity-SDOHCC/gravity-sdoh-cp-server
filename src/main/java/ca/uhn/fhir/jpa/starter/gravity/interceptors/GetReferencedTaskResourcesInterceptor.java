@@ -76,6 +76,8 @@ public class GetReferencedTaskResourcesInterceptor {
 					.resource(Organization.class)
 					.withUrl(ownerUrl)
 					.execute();
+			// Added to fix version conflict. When the resource on EHR server is updated (e.g., url changes), the update below was Throwing ResourceVersionConflictException.
+			owner.setIdElement(owner.getIdElement().toVersionless());
 			myClient.update().resource(owner).execute();
 			logger.info("Successfully retrieved and saved the associated task owner information");
 		} catch (Exception e) {

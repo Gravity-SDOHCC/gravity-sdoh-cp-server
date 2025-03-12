@@ -14,6 +14,7 @@ public class SdohCapabilityStatementProvider {
 	@Hook(Pointcut.SERVER_CAPABILITY_STATEMENT_GENERATED)
 	public CapabilityStatement getServerConformance(IBaseConformance theCapabilityStatement) {
 		CapabilityStatement metadata = (CapabilityStatement) theCapabilityStatement;
+		metadata.addInstantiates("http://hl7.org/fhir/us/sdoh-clinicalcare/CapabilityStatement/SDOHCC-CoordinationPlatform");
 		metadata.addInstantiates("http://hl7.org/fhir/us/sdoh-clinicalcare/CapabilityStatement/SDOHCC-ReferralSource");
 		metadata.setName("Gravity SDOH CP FHIR Server RI");
 		metadata.setDescription(
