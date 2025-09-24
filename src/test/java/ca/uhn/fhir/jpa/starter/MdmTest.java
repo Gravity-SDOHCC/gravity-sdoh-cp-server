@@ -12,7 +12,8 @@ import ca.uhn.fhir.jpa.nickname.INicknameSvc;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
 		"hapi.fhir.fhir_version=r4",
-		"hapi.fhir.mdm_enabled=true"
+		"hapi.fhir.mdm_enabled=true",
+		"spring.jpa.properties.hibernate.search.backend.directory.type=local-heap"
 })
 class MdmTest {
 	@Autowired
