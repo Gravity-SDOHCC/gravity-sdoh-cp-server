@@ -1,11 +1,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0"
-    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-    xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
+    <properties>
+        <java.version>17</java.version>
+        <hapi.fhir.jpa.server.starter.revision>3</hapi.fhir.jpa.server.starter.revision>
+        <clinical-reasoning.version>3.26.0</clinical-reasoning.version>
+    </properties>
+
     <!-- one-liner to take you to the cloud with settings form the application.yaml file: -->
-    <!-- 'mvn clean package com.google.cloud.tools:jib-maven-plugin:dockerBuild
-    -Dimage=distroless-hapi && docker run -p 8080:8080 distroless-hapi' -->
+    <!-- 'mvn clean package com.google.cloud.tools:jib-maven-plugin:dockerBuild -Dimage=distroless-hapi && docker run -p 8080:8080 distroless-hapi' -->
     <!--
     Note: HAPI projects use the "hapi-fhir" POM as their base to provide easy management.
     You do not need to use this in your own projects, so the "parent" tag and it's
@@ -15,15 +20,12 @@
     <parent>
         <groupId>ca.uhn.hapi.fhir</groupId>
         <artifactId>hapi-fhir</artifactId>
-        <version>8.0.0</version>
+        <version>8.4.0</version>
     </parent>
 
     <artifactId>hapi-fhir-jpaserver-starter</artifactId>
+    <version>${project.parent.version}-${hapi.fhir.jpa.server.starter.revision}</version>
     <packaging>war</packaging>
-
-    <properties>
-        <java.version>17</java.version>
-    </properties>
 
     <prerequisites>
         <maven>3.8.3</maven>
@@ -33,32 +35,48 @@
 
     <repositories>
         <repository>
-            <id>oss-snapshots</id>
+            <name>Central Portal Snapshots</name>
+            <id>central-portal-snapshots</id>
+            <url>https://central.sonatype.com/repository/maven-snapshots/</url>
+            <releases>
+                <enabled>false</enabled>
+            </releases>
             <snapshots>
                 <enabled>true</enabled>
             </snapshots>
-            <url>https://oss.sonatype.org/content/repositories/snapshots/</url>
         </repository>
     </repositories>
 
     <dependencyManagement>
-    <dependencies>
-        <dependency>
+       <dependencies>
+
+            <dependency>
                <groupId>org.glassfish.jaxb</groupId>
                <artifactId>jaxb-runtime</artifactId>
                <version>2.3.8</version>
-        </dependency>
+           </dependency>
        </dependencies>
     </dependencyManagement>
 
     <dependencies>
+
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+            <version>${spring_boot_version}</version>
+        </dependency>
+        <dependency>
+            <groupId>co.elastic.clients</groupId>
+            <artifactId>elasticsearch-java</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.microsoft.sqlserver</groupId>
-            <artifactId>mssql-jdbc</artifactId>
+          <groupId>com.microsoft.sqlserver</groupId>
+          <artifactId>mssql-jdbc</artifactId>
         </dependency>
 
         <!-- Needed for Email subscriptions -->
@@ -77,29 +95,29 @@
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
-            <version>3.1.0.RELEASE</version>
+            <version>6.5.1</version>
         </dependency>
 
         <!-- JWT support -->
         <dependency>
             <groupId>com.auth0</groupId>
             <artifactId>java-jwt</artifactId>
-            <version>3.10.0</version>
+            <version>4.5.0</version>
         </dependency>
         <!-- JSON support -->
         <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
-            <version>20180130</version>
+            <version>20250517</version>
         </dependency>
+
         <!-- This dependency includes the core HAPI-FHIR classes -->
         <dependency>
             <groupId>ca.uhn.hapi.fhir</groupId>
             <artifactId>hapi-fhir-base</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
-        <!-- This dependency includes the EmailSenderImpl we will be using instead of standard
-        javamail.-->
+        <!-- This dependency includes the EmailSenderImpl we will be using instead of standard javamail.-->
         <dependency>
             <groupId>ca.uhn.hapi.fhir</groupId>
             <artifactId>hapi-fhir-jpaserver-subscription</artifactId>
@@ -112,8 +130,7 @@
             </exclusions>
         </dependency>
 
-        <!-- This dependency includes the JPA server itself, which is packaged separately from the
-        rest of HAPI FHIR -->
+        <!-- This dependency includes the JPA server itself, which is packaged separately from the rest of HAPI FHIR -->
         <dependency>
             <groupId>ca.uhn.hapi.fhir</groupId>
             <artifactId>hapi-fhir-jpaserver-base</artifactId>
@@ -131,9 +148,9 @@
         </dependency>
         <!-- This dependency includes the JPA CQL Server -->
         <dependency>
-            <groupId>ca.uhn.hapi.fhir</groupId>
-            <artifactId>hapi-fhir-storage-cr</artifactId>
-            <version>${project.parent.version}</version>
+            <groupId>org.opencds.cqf.fhir</groupId>
+            <artifactId>cqf-fhir-cr-hapi</artifactId>
+            <version>${clinical-reasoning.version}</version>
         </dependency>
         <!-- This dependency includes the JPA MDM Server -->
         <dependency>
@@ -145,10 +162,17 @@
             <groupId>org.springframework</groupId>
             <artifactId>spring-context</artifactId>
         </dependency>
+        <!-- This dependency includes the CDS Hooks Server -->
         <dependency>
           <groupId>ca.uhn.hapi.fhir</groupId>
           <artifactId>hapi-fhir-server-cds-hooks</artifactId>
           <version>${project.parent.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>ca.uhn.hapi.fhir</groupId>
+            <artifactId>hapi-fhir-converter</artifactId>
+            <version>${project.parent.version}</version>
         </dependency>
         <!-- This dependency includes the OpenAPI Server -->
         <dependency>
@@ -183,9 +207,7 @@
             <version>${project.parent.version}</version>
         </dependency>
 
-        <!-- HAPI-FHIR uses Logback for logging support. The logback library is included
-        automatically by Maven as a part of the hapi-fhir-base dependency, but you also need to
-        include a logging library. Logback
+        <!-- HAPI-FHIR uses Logback for logging support. The logback library is included automatically by Maven as a part of the hapi-fhir-base dependency, but you also need to include a logging library. Logback
             is used here, but log4j would also be fine. -->
         <dependency>
             <groupId>ch.qos.logback</groupId>
@@ -203,14 +225,11 @@
             <scope>provided</scope>
         </dependency>
 
-        <!-- If you are using HAPI narrative generation, you will need to include Thymeleaf as well.
-        Otherwise the following can be omitted. -->
+        <!-- If you are using HAPI narrative generation, you will need to include Thymeleaf as well. Otherwise, the following can be omitted. -->
         <dependency>
             <groupId>org.thymeleaf</groupId>
             <artifactId>thymeleaf</artifactId>
         </dependency>
-
-        <!-- Needed for parsing the config -->
 
         <!-- Used for CORS support -->
         <!-- Spring Web is used to deploy the server to a web container. -->
@@ -219,14 +238,15 @@
             <artifactId>spring-web</artifactId>
         </dependency>
 
+        <!-- commons-logging is provided by jcl-over-slf4j, and the jar often shows up because of transitive dependencies; this dependency should avoid it -->
         <dependency>
             <groupId>commons-logging</groupId>
             <artifactId>commons-logging</artifactId>
             <version>1.2</version>
             <scope>provided</scope>
         </dependency>
-        <!-- You may not need this if you are deploying to an application server which provides
-        database connection pools itself. -->
+
+        <!-- You may not need this if you are deploying to an application server which provides database connection pools itself. -->
         <dependency>
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-dbcp2</artifactId>
@@ -238,9 +258,7 @@
             </exclusions>
         </dependency>
 
-        <!-- This example uses H2 embedded database. If you are using another database such as Mysql
-        or Oracle, you may omit the following dependencies and replace them with an appropriate
-        database client
+        <!-- This example uses H2 embedded database. If you are using another database such as Mysql or Oracle, you may omit the following dependencies and replace them with an appropriate database client
             dependency for your database platform. -->
         <dependency>
             <groupId>com.h2database</groupId>
@@ -277,13 +295,8 @@
             <artifactId>moment</artifactId>
         </dependency>
 
-        <!-- The following dependencies are only needed for automated unit tests, you do not
-        neccesarily need them to run the example. -->
-        <dependency>
-            <groupId>co.elastic.clients</groupId>
-            <artifactId>elasticsearch-java</artifactId>
-            <scope>test</scope>
-        </dependency>
+
+
         <dependency>
             <groupId>ca.uhn.hapi.fhir</groupId>
             <artifactId>hapi-fhir-jpaserver-test-utilities</artifactId>
@@ -296,6 +309,7 @@
                 </exclusion>
             </exclusions>
         </dependency>
+
         <dependency>
             <groupId>org.testcontainers</groupId>
             <artifactId>testcontainers</artifactId>
@@ -379,6 +393,7 @@
             <artifactId>micrometer-registry-prometheus</artifactId>
             <version>1.13.3</version>
         </dependency>
+
         <!-- https://mvnrepository.com/artifact/io.micrometer/micrometer-registry-prometheus-simpleclient -->
         <dependency>
             <groupId>io.micrometer</groupId>
@@ -386,12 +401,37 @@
             <version>1.13.3</version>
         </dependency>
 
+
         <dependency>
             <groupId>com.zaxxer</groupId>
             <artifactId>HikariCP</artifactId>
             <version>5.0.1</version>
         </dependency>
 
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-mcp</artifactId>
+            <version>1.1.0-M1</version>
+        </dependency>
+
+        <!--implementation("org.springframework.ai:spring-ai-starter-mcp-server-webmvc:1.1.0-M1")-->
+        <dependency>
+            <groupId>org.springframework.ai</groupId>
+            <artifactId>spring-ai-starter-mcp-server</artifactId>
+            <version>1.1.0-M1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>io.modelcontextprotocol.sdk</groupId>
+            <artifactId>mcp</artifactId>
+            <version>0.12.1</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-test</artifactId>
+
+        </dependency>
 
         <dependency>
             <groupId>org.junit.jupiter</groupId>
@@ -408,8 +448,6 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
-
-
         </dependency>
 
     </dependencies>
@@ -468,8 +506,7 @@
                 </configuration>
             </plugin>
 
-            <!-- The configuration here tells the WAR plugin to include the FHIR Tester overlay. You
-            can omit it if you are not using that feature. -->
+            <!-- The configuration here tells the WAR plugin to include the FHIR Tester overlay. You can omit it if you are not using that feature. -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-war-plugin</artifactId>
@@ -605,20 +642,17 @@
     </build>
 
     <profiles>
-        <!-- Package the war for your preference. Use the boot profile if you prefer a single
-        jar/war
+        <!-- Package the war for your preference. Use the boot profile if you prefer a single jar/war
         that can be started with and embedded application server. Default is jetty as it is assumed
         that the main users of this project already have an app server.
         Different profiles are needed as packing it for spring boot, makes the resulting war undeployable
         due to a class shading issue between tomcat and jetty.
-        (the error is 'java.util.ServiceConfigurationError: org.apache.juli.logging.Log:
-        org.eclipse.jetty.apache.jsp.JuliLog not a subtype')
+        (the error is 'java.util.ServiceConfigurationError: org.apache.juli.logging.Log: org.eclipse.jetty.apache.jsp.JuliLog not a subtype')
 
          -->
 
         <!-- example of how to start the server using spring boot-->
-        <!-- mvn clean package spring-boot:repackage -Pboot && java -jar
-        target/hapi-fhir-jpaserver.war -->
+        <!-- mvn clean package spring-boot:repackage -Pboot && java -jar target/ROOT.war -->
 
         <!-- Use the boot profile for development and debugging options when using your IDE -->
         <profile>
@@ -634,9 +668,20 @@
                 </dependency>
             </dependencies>
         </profile>
-        <!-- examples of how to start the server using the default profile-->
-        <!-- mvn clean package jetty:run -->
-        <!-- java -jar jetty-runner.jar target/hapi-fhir-jpaserver.war -->
+        <!--                                                              -->
+        <!-- Examples of how to run the server:                           -->
+        <!--                                                              -->
+        <!-- For Spring Boot use:                                         -->
+        <!-- mvn spring-boot:run                                          -->
+        <!--                                                              -->
+        <!-- For JETTY use:                                               -->
+        <!-- mvn -Pjetty spring-boot:run                                  -->
+        <!--                                                              -->
+        <!-- For the Tomcat WAR approach use:                             -->
+        <!-- mvn clean package -DskipTests && java -jar ./target/ROOT.war -->
+        <!--                                                              -->
+        <!-- NEXT: Browse to http://localhost:8080/fhir                   -->
+        <!--                                                              -->
         <profile>
             <id>jetty</id>
             <dependencies>

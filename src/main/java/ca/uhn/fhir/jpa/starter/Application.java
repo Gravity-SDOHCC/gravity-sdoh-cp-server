@@ -6,9 +6,6 @@ import ca.uhn.fhir.jpa.starter.annotations.OnEitherVersion;
 import ca.uhn.fhir.jpa.starter.cdshooks.StarterCdsHooksConfig;
 import ca.uhn.fhir.jpa.starter.cr.StarterCrDstu3Config;
 import ca.uhn.fhir.jpa.starter.cr.StarterCrR4Config;
-import ca.uhn.fhir.jpa.starter.gravity.SdohCapabilityStatementProvider;
-import ca.uhn.fhir.jpa.starter.gravity.controllers.AuthorizationController;
-import ca.uhn.fhir.jpa.starter.gravity.interceptors.GetReferencedTaskResourcesInterceptor;
 import ca.uhn.fhir.jpa.starter.mdm.MdmConfig;
 import ca.uhn.fhir.jpa.subscription.channel.config.SubscriptionChannelConfig;
 import ca.uhn.fhir.jpa.subscription.match.config.SubscriptionProcessorConfig;
@@ -19,7 +16,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.config.AutowireCapableBeanFactory;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.boot.autoconfigure.elasticsearch.ElasticsearchRestClientAutoConfiguration;
 import org.springframework.boot.autoconfigure.thymeleaf.ThymeleafAutoConfiguration;
 import org.springframework.boot.web.servlet.ServletComponentScan;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
@@ -27,11 +23,9 @@ import org.springframework.boot.web.servlet.support.SpringBootServletInitializer
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Conditional;
 import org.springframework.context.annotation.Import;
-import org.springframework.web.context.support.AnnotationConfigWebApplicationContext;
-import org.springframework.web.servlet.DispatcherServlet;
 
 @ServletComponentScan(basePackageClasses = {RestfulServer.class})
-@SpringBootApplication(exclude = {ElasticsearchRestClientAutoConfiguration.class, ThymeleafAutoConfiguration.class})
+@SpringBootApplication(exclude = {ThymeleafAutoConfiguration.class})
 @Import({
 	StarterCrR4Config.class,
 	StarterCrDstu3Config.class,
@@ -50,7 +44,7 @@ public class Application extends SpringBootServletInitializer {
 
 		SpringApplication.run(Application.class, args);
 
-		// Server is now accessible at eg. http://localhost:8080/fhir/metadata
+		// Server is now accessible at e.g. http://localhost:8080/fhir/metadata
 		// UI is now accessible at http://localhost:8080/
 	}
 
@@ -60,8 +54,6 @@ public class Application extends SpringBootServletInitializer {
 	@Bean
 	@Conditional(OnEitherVersion.class)
 	public ServletRegistrationBean hapiServletRegistration(RestfulServer restfulServer) {
-		restfulServer.registerInterceptor(new SdohCapabilityStatementProvider());
-		restfulServer.registerInterceptor(new GetReferencedTaskResourcesInterceptor());
 		ServletRegistrationBean servletRegistrationBean = new ServletRegistrationBean();
 		beanFactory.autowireBean(restfulServer);
 		servletRegistrationBean.setServlet(restfulServer);
@@ -69,18 +61,5 @@ public class Application extends SpringBootServletInitializer {
 		servletRegistrationBean.setLoadOnStartup(1);
 
 		return servletRegistrationBean;
-	}
-
-	@Bean
-	public ServletRegistrationBean<DispatcherServlet> oauthServletRegistration(DispatcherServlet dispatcherServlet) {
-		dispatcherServlet.setContextClass(AnnotationConfigWebApplicationContext.class);
-		dispatcherServlet.setContextConfigLocation(AuthorizationController.class.getName());
-
-		ServletRegistrationBean registrationBean = new ServletRegistrationBean();
-		registrationBean.setServlet(dispatcherServlet);
-		registrationBean.addUrlMappings("/*");
-		registrationBean.addUrlMappings("/fhir/oauth/*");
-		registrationBean.setLoadOnStartup(2);
-		return registrationBean;
 	}
 }

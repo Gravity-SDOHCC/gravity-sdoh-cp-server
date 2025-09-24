@@ -26,7 +26,7 @@ public class SdohCapabilityStatementProvider {
 
 		CapabilityStatementSoftwareComponent software = new CapabilityStatementSoftwareComponent();
 		software.setName("Gravity SDOHCC CP HAPI FHIR based Server");
-		software.setVersion("2.0.0");
+		software.setVersion("2.3.0");
 		metadata.setSoftware(software);
 
 		return metadata;
