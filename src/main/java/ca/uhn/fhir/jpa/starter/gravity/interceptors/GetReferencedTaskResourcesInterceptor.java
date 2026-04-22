@@ -45,20 +45,41 @@ public class GetReferencedTaskResourcesInterceptor {
 		logger.info("Retrieving associated resources for task " + createdTask.getIdPart());
 
 		String thisServerBaseUrl = theRequestDetails.getFhirServerBase();
-		String patientUrl = createdTask.getFor().getReference();
-		String serviceRequestUrl = createdTask.getFocus().getReference();
-		String requesterUrl = createdTask.getRequester().getReference();
-		String receiverBaseUrl = serviceRequestUrl.substring(0, serviceRequestUrl.indexOf("/ServiceRequest"));
-		String serviceRequestId = serviceRequestUrl.substring(serviceRequestUrl.lastIndexOf('/') + 1);
-		serviceRequestUrl =
-				receiverBaseUrl + "/ServiceRequest" + "?_id=" + serviceRequestId + "&_include=ServiceRequest:subject";
-		String ownerUrl = receiverBaseUrl + "/" + createdTask.getOwner().getReference();
+		String ownerRef = createdTask.hasOwner() ? createdTask.getOwner().getReference() : null;
 
-		IGenericClient receiverClient = setupClient(receiverBaseUrl);
-		IGenericClient myClient = setupClient(thisServerBaseUrl);
+		// External resource fetching if Task references are absolute/full URLs (external server).
+		// Relative references (e.g., "Patient/123") are handled by the FHIR server
+		String receiverBaseUrl = null;
+		String patientUrl = null;
+		String serviceRequestUrl = null;
+		String requesterUrl = null;
+		String ownerUrl = null;
 
-		getreferencedResourcesAndPersist(
-				receiverClient, myClient, patientUrl, requesterUrl, serviceRequestUrl, ownerUrl);
+		if (createdTask.hasFor() && createdTask.getFor().getReferenceElement().isAbsolute()) {
+			patientUrl = createdTask.getFor().getReference();
+		}
+		if (createdTask.hasFocus() && createdTask.getFocus().getReferenceElement().isAbsolute()) {
+			serviceRequestUrl = createdTask.getFocus().getReference();
+			// Extract base URL for receiver, fix for substring error
+			int idx = serviceRequestUrl.indexOf("/ServiceRequest");
+			if (idx > 0) {
+				receiverBaseUrl = serviceRequestUrl.substring(0, idx);
+				String serviceRequestId = serviceRequestUrl.substring(serviceRequestUrl.lastIndexOf('/') + 1);
+				serviceRequestUrl = receiverBaseUrl + "/ServiceRequest" + "?_id=" + serviceRequestId + "&_include=ServiceRequest:subject";
+			}
+		}
+		if (createdTask.hasRequester() && createdTask.getRequester().getReferenceElement().isAbsolute()) {
+			requesterUrl = createdTask.getRequester().getReference();
+		}
+		if (ownerRef != null && new Reference(ownerRef).getReferenceElement().isAbsolute()) {
+			ownerUrl = ownerRef;
+		}
+		if (receiverBaseUrl != null && (patientUrl != null || serviceRequestUrl != null || requesterUrl != null || ownerUrl != null)) {
+			IGenericClient receiverClient = setupClient(receiverBaseUrl);
+			IGenericClient myClient = setupClient(thisServerBaseUrl);
+			getreferencedResourcesAndPersist(
+					receiverClient, myClient, patientUrl, requesterUrl, serviceRequestUrl, ownerUrl);
+		}
 	}
 
 	private void getreferencedResourcesAndPersist(
@@ -69,17 +90,19 @@ public class GetReferencedTaskResourcesInterceptor {
 			String serviceRequestUrl,
 			String ownerUrl) {
 
-		// Retrieving Task owner resource
+		// Retrieving Task owner resource (optional field)
 		try {
-			Organization owner = receiverClient
-					.read()
-					.resource(Organization.class)
-					.withUrl(ownerUrl)
-					.execute();
-			// Added to fix version conflict. When the resource on EHR server is updated (e.g., url changes), the update below was Throwing ResourceVersionConflictException.
-			owner.setIdElement(owner.getIdElement().toVersionless());
-			myClient.update().resource(owner).execute();
-			logger.info("Successfully retrieved and saved the associated task owner information");
+			if (ownerUrl != null) {
+				Organization owner = receiverClient
+						.read()
+						.resource(Organization.class)
+						.withUrl(ownerUrl)
+						.execute();
+				// Added to fix version conflict. When the resource on EHR server is updated (e.g., url changes), the update below was Throwing ResourceVersionConflictException.
+				owner.setId(owner.getIdElement().toVersionless().getIdPart());
+				myClient.update().resource(owner).execute();
+				logger.info("Successfully retrieved and saved the associated task owner information");
+			}
 		} catch (Exception e) {
 			logger.severe("Unable to retrieved/update owner for received task: " + e.getMessage());
 		}
@@ -91,7 +114,7 @@ public class GetReferencedTaskResourcesInterceptor {
 					.resource(Patient.class)
 					.withUrl(patientUrl)
 					.execute();
-			patient.setIdElement(patient.getIdElement().toVersionless());
+			patient.setId(patient.getIdElement().toVersionless().getIdPart());
 			myClient.update().resource(patient).execute();
 			logger.info("Successfully retrieved and saved the associated patient");
 		} catch (Exception e) {
@@ -106,7 +129,7 @@ public class GetReferencedTaskResourcesInterceptor {
 						.resource(Organization.class)
 						.withUrl(requesterUrl)
 						.execute();
-				organization.setIdElement(organization.getIdElement().toVersionless());
+				organization.setId(organization.getIdElement().toVersionless().getIdPart());
 				myClient.update().resource(organization).execute();
 
 			} else if (requesterUrl.contains("PractitionerRole")) {
@@ -122,7 +145,7 @@ public class GetReferencedTaskResourcesInterceptor {
 				String practitionerRef = practitionerRole.getPractitioner().getReference();
 				practitionerRef = receiverClient.getServerBase() + "/" + practitionerRef;
 				practitionerRole.getPractitioner().setReference(practitionerRef);
-				practitionerRole.setIdElement(practitionerRole.getIdElement().toVersionless());
+				practitionerRole.setId(practitionerRole.getIdElement().toVersionless().getIdPart());
 				myClient.update().resource(practitionerRole).execute();
 			} else if (requesterUrl.contains("Practitioner")) {
 				Practitioner practitioner = receiverClient
@@ -130,7 +153,7 @@ public class GetReferencedTaskResourcesInterceptor {
 						.resource(Practitioner.class)
 						.withUrl(requesterUrl)
 						.execute();
-				practitioner.setIdElement(practitioner.getIdElement().toVersionless());
+				practitioner.setId(practitioner.getIdElement().toVersionless().getIdPart());
 				myClient.update().resource(practitioner).execute();
 			}
 			logger.info("Successfully retrieved and saved the associated task requester");
@@ -157,7 +180,7 @@ public class GetReferencedTaskResourcesInterceptor {
 							&& request.getSupportingInfoFirstRep().getReference() != null) {
 						String consentref = request.getSupportingInfoFirstRep().getReference();
 						consentId = consentref.substring(consentref.lastIndexOf('/') + 1);
-					} else if (request.getReasonReferenceFirstRep() != null) {
+					} else if (request.getReasonReferenceFirstRep() != null && request.getReasonReferenceFirstRep().getReference() != null) {
 						String conditionref =
 								request.getReasonReferenceFirstRep().getReference();
 						conditionref = receiverClient.getServerBase() + "/" + conditionref;
@@ -183,7 +206,7 @@ public class GetReferencedTaskResourcesInterceptor {
 				List<Reference> newList = new ArrayList<Reference>();
 				newList.add(new Reference(orgRef));
 				consent.setOrganization(newList);
-				consent.setIdElement(consent.getIdElement().toVersionless());
+				consent.setId(consent.getIdElement().toVersionless().getIdPart());
 				myClient.update().resource(consent).execute();
 				logger.info("Retrieved the associated patient's consent");
 			}
@@ -193,7 +216,7 @@ public class GetReferencedTaskResourcesInterceptor {
 
 		try {
 			if (request != null) {
-				request.setIdElement(request.getIdElement().toVersionless());
+				request.setId(request.getIdElement().toVersionless().getIdPart());
 				myClient.update().resource(request).execute();
 				logger.info("Successfully saved the associated task's service request");
 			}
